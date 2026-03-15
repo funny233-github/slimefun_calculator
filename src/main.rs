@@ -251,6 +251,25 @@ impl RecipeTable {
 
         Ok(result)
     }
+
+    /// Find and format all items that can be crafted using the given material
+    fn print_use(&self, material_name: &str) -> Result<String> {
+        let mut result = String::new();
+        writeln!(result, "= {}可以用于", material_name)?;
+
+        // Find all recipes that include this material
+        for (item_name, recipe) in &self.craft_table {
+            if recipe
+                .material_list
+                .iter()
+                .any(|entry| entry.name() == material_name)
+            {
+                writeln!(result, "- {}", item_name)?;
+            }
+        }
+
+        Ok(result)
+    }
 }
 
 fn main() -> Result<()> {
@@ -270,7 +289,7 @@ fn main() -> Result<()> {
     // Calculate based on purpose
     let result = match args.purpose {
         Purpose::Recipe => table.print_material(&args.query)?,
-        Purpose::Use => return Err(anyhow::anyhow!("Use command not yet implemented")),
+        Purpose::Use => table.print_use(&args.query)?,
     };
 
     // Output result
