@@ -100,14 +100,18 @@ impl RecipeTable {
 
         self.calc_material_inner(&mut materials, &mut surplus);
 
-        // Aggregate materials
-        let mut aggregated = BTreeMap::new();
+        // Aggregate materials while preserving order (closer to target = earlier)
+        let mut aggregated: Vec<(String, u32)> = Vec::new();
         for (name, count, _) in &materials {
-            *aggregated.entry(name.clone()).or_insert(0) += count;
+            // Check if material already exists in the result
+            if let Some(existing) = aggregated.iter_mut().find(|(n, _)| n == name) {
+                existing.1 += count;
+            } else {
+                aggregated.push((name.clone(), *count));
+            }
         }
 
-        // Convert to sorted vector for consistent output
-        aggregated.into_iter().collect()
+        aggregated
     }
 
     /// Inner recursive calculation with surplus tracking
