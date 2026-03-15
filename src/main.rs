@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::from_str;
 use std::collections::BTreeMap;
@@ -100,18 +101,13 @@ impl RecipeTable {
 
         self.calc_material_inner(&mut materials, &mut surplus);
 
-        // Aggregate materials while preserving order (closer to target = earlier)
-        let mut aggregated: Vec<(String, u32)> = Vec::new();
+        // Aggregate materials while preserving insertion order (closer to target = earlier)
+        let mut aggregated: IndexMap<String, u32> = IndexMap::new();
         for (name, count, _) in &materials {
-            // Check if material already exists in the result
-            if let Some(existing) = aggregated.iter_mut().find(|(n, _)| n == name) {
-                existing.1 += count;
-            } else {
-                aggregated.push((name.clone(), *count));
-            }
+            *aggregated.entry(name.clone()).or_insert(0) += count;
         }
 
-        aggregated
+        aggregated.into_iter().collect()
     }
 
     /// Inner recursive calculation with surplus tracking
@@ -288,4 +284,3 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
