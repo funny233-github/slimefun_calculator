@@ -1,0 +1,98 @@
+name: Build and Release
+
+# 触发条件
+on:
+  push:
+    tags:
+      - "v*" # 推送形如 v1.0.0 的标签时触发
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            suffix: ""
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            suffix: ".exe"
+          # - os: macos-latest
+          #   target: x86_64-apple-darwin
+          #   suffix: ""
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            suffix: ""
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+
+      # 可选：缓存 Cargo 依赖，加快构建速度
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      # 打包生成的可执行文件
+      - name: Package binary
+        shell: bash
+        run: |
+          BIN_NAME="slimefun_calculator"  # 替换为你的实际二进制名称
+          TARGET_DIR="target/${{ matrix.target }}/release"
+          # 进入目标目录，将二进制文件打包成 zip/tar.gz
+          cd $TARGET_DIR
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            7z a ../../../${BIN_NAME}-${{ matrix.target }}.zip ${BIN_NAME}${{ matrix.suffix }}
+          else
+            tar czf ../../../${BIN_NAME}-${{ matrix.target }}.tar.gz ${BIN_NAME}${{ matrix.suffix }}
+          fi
+          cd -
+
+      # 上传构建产物到 Actions Artifacts
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}-binary
+          path: |
+            *.zip
+            *.tar.gz
+          if-no-files-found: error
+
+  # 可选：创建 GitHub Release 并上传所有二进制文件
+  release:
+    name: Create Release
+    needs: build # 等待 build 任务完成
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') # 只有 tag 推送才创建 Release
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
