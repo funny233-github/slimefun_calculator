@@ -3,8 +3,11 @@ name: Build and Release
 # 触发条件
 on:
   push:
+    branches: ["master"]
     tags:
       - "v*" # 推送形如 v1.0.0 的标签时触发
+    pull_request:
+      branches: ["master"]
   workflow_dispatch: # 允许手动触发
 
 jobs:
