@@ -219,28 +219,28 @@ impl RecipeTable {
             .context(format!("Recipe not found for: {}", name))?;
         let total_count = recipe.count.map_or(num, |batch| batch * num);
 
-        let r = recipe
+        let materials = recipe
             .material_list
             .iter()
             .map(|entry| {
                 if entry.count() == 1 {
-                    entry.name().to_string()
+                    format!("[{}]", entry.name())
                 } else {
-                    format!("{} * {}", entry.name(), entry.count())
+                    format!("[{}] * [{}]", entry.name(), entry.count())
                 }
             })
             .fold(String::new(), |acc, entry| {
                 if acc.is_empty() {
-                    format!("[{}]", entry)
+                    entry
                 } else {
-                    format!("{} + [{}]", acc, entry)
+                    format!("{} + {}", acc, entry)
                 }
             });
 
         writeln!(
             result,
             "[ ] {} => [{}] * [{}] (通过[{}])",
-            r, name, total_count, recipe.machine
+            materials, name, total_count, recipe.machine
         )?;
 
         Ok(result)
