@@ -219,15 +219,29 @@ impl RecipeTable {
             .context(format!("Recipe not found for: {}", name))?;
         let total_count = recipe.count.map_or(num, |batch| batch * num);
 
+        let r = recipe
+            .material_list
+            .iter()
+            .map(|entry| {
+                if entry.count() == 1 {
+                    entry.name().to_string()
+                } else {
+                    format!("{} * {}", entry.name(), entry.count())
+                }
+            })
+            .fold(String::new(), |acc, entry| {
+                if acc.is_empty() {
+                    format!("[{}]", entry)
+                } else {
+                    format!("{} + [{}]", acc, entry)
+                }
+            });
+
         writeln!(
             result,
-            "== [{}] 数量[{}] 通过 [{}]",
-            name, total_count, recipe.machine
+            "[ ] {} => [{}] * [{}] (通过[{}])",
+            r, name, total_count, recipe.machine
         )?;
-
-        for entry in &recipe.material_list {
-            writeln!(result, "[ ] {}:{}", entry.name(), entry.count() * num)?;
-        }
 
         Ok(result)
     }
