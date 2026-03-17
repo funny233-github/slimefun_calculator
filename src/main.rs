@@ -259,7 +259,7 @@ impl RecipeTable {
         // Print crafting steps in reverse order (topological sort)
         for (name, num) in material_table.iter().rev() {
             if !self.is_base_material(name) {
-                writeln!(result, "{}", self.print_single_material(name, *num)?)?;
+                write!(result, "{}", self.print_single_material(name, *num)?)?;
             }
         }
 
